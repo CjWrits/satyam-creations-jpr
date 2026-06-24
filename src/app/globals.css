@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ivory: #FDFBF7;
+  --color-beige: #F5F0E6;
+  --color-gold: #C5A880;
+  --color-gold-hover: #B4966F;
+  --color-maroon: #4A0E17;
+  --color-maroon-hover: #370A10;
+  --color-soft-black: #121212;
+  --color-soft-gray: #EAE5D9;
+  
+  --font-serif: var(--font-serif), serif;
+  --font-sans: var(--font-sans), sans-serif;
+}
+
+:root {
+  --background: #FDFBF7; /* Ivory */
+  --foreground: #121212; /* Soft Black */
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+/* Glassmorphism utility classes */
+.glass {
+  background: rgba(253, 251, 247, 0.75);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(197, 168, 128, 0.2);
+}
+
+.glass-dark {
+  background: rgba(18, 18, 18, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(197, 168, 128, 0.15);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(197, 168, 128, 0.15);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.03);
+}
+
+/* Luxury animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.8s ease-out forwards;
+}

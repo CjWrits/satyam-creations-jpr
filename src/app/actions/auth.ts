@@ -20,41 +20,83 @@ export async function loginAction(
   const callbackUrl = (formData.get('callbackUrl') as string) || '/';
 
   if (!email || !password) {
-    return { success: false, error: 'Email and password are required.' };
+    return {
+      success: false,
+      error: 'Email and password are required.',
+    };
   }
 
-  // 1. Check if email/password matches the secure environment variables first (as required)
-  const envAdminEmail = process.env.ADMIN_EMAIL || 'admin@kurticatalog.com';
-  const envAdminPassword = process.env.ADMIN_PASSWORD || 'AdminPassword123!';
+  const envAdminEmail = process.env.ADMIN_EMAIL;
+  const envAdminPassword = process.env.ADMIN_PASSWORD;
 
+  if (!envAdminEmail || !envAdminPassword) {
+    console.error('ADMIN_EMAIL or ADMIN_PASSWORD is missing');
+
+    return {
+      success: false,
+      error: 'Server configuration error.',
+    };
+  }
+
+  // Admin login from environment variables
   if (email.toLowerCase() === envAdminEmail.toLowerCase()) {
     if (password === envAdminPassword) {
-      await createSession('admin-env', envAdminEmail, 'ADMIN', rememberMe);
+      await createSession(
+        'admin-env',
+        envAdminEmail,
+        'ADMIN',
+        rememberMe
+      );
+
       redirect(callbackUrl);
-    } else {
-      return { success: false, error: 'Invalid password.' };
     }
+
+    return {
+      success: false,
+      error: 'Invalid password.',
+    };
   }
 
-  // 2. Fallback to database user lookups
+  // Database users
   try {
     const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
+      where: {
+        email: email.toLowerCase(),
+      },
     });
 
     if (!user) {
-      return { success: false, error: 'Invalid credentials.' };
+      return {
+        success: false,
+        error: 'Invalid credentials.',
+      };
     }
 
-    const isValidPassword = await bcrypt.compare(password, user.password);
+    const isValidPassword = await bcrypt.compare(
+      password,
+      user.password
+    );
+
     if (!isValidPassword) {
-      return { success: false, error: 'Invalid credentials.' };
+      return {
+        success: false,
+        error: 'Invalid credentials.',
+      };
     }
 
-    await createSession(user.id, user.email, user.role, rememberMe);
+    await createSession(
+      user.id,
+      user.email,
+      user.role,
+      rememberMe
+    );
   } catch (error) {
     console.error('Authentication database error:', error);
-    return { success: false, error: 'Authentication failed due to a database error.' };
+
+    return {
+      success: false,
+      error: 'Authentication failed due to a database error.',
+    };
   }
 
   redirect(callbackUrl);

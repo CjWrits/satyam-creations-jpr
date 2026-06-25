@@ -31,7 +31,7 @@ export interface ProductData {
   category: CategoryData;
   collection: CollectionData | null;
   images: ImageData[];
-  createdAt: Date;
+  createdAt: string;
 }
 
 // High-quality royalty-free images of Indian ethnic fashion from Unsplash
@@ -88,7 +88,7 @@ const MOCK_PRODUCTS: ProductData[] = [
       original: url,
       isPrimary: idx === 0,
     })),
-    createdAt: new Date(Date.now() - 3600000 * 24 * 2), // 2 days ago
+    createdAt: new Date(Date.now() - 3600000 * 24 * 2).toISOString(), // 2 days ago
   },
   {
     id: 'prod-2',
@@ -105,7 +105,7 @@ const MOCK_PRODUCTS: ProductData[] = [
       original: url,
       isPrimary: idx === 0,
     })),
-    createdAt: new Date(Date.now() - 3600000 * 24 * 5),
+    createdAt: new Date(Date.now() - 3600000 * 24 * 5).toISOString(),
   },
   {
     id: 'prod-3',
@@ -122,7 +122,7 @@ const MOCK_PRODUCTS: ProductData[] = [
       original: url,
       isPrimary: idx === 0,
     })),
-    createdAt: new Date(Date.now() - 3600000 * 24 * 1),
+    createdAt: new Date(Date.now() - 3600000 * 24 * 1).toISOString(),
   },
   {
     id: 'prod-4',
@@ -139,7 +139,7 @@ const MOCK_PRODUCTS: ProductData[] = [
       original: url,
       isPrimary: idx === 0,
     })),
-    createdAt: new Date(Date.now() - 3600000 * 24 * 10),
+    createdAt: new Date(Date.now() - 3600000 * 24 * 10).toISOString(),
   },
   {
     id: 'prod-5',
@@ -156,7 +156,7 @@ const MOCK_PRODUCTS: ProductData[] = [
       original: url,
       isPrimary: idx === 0,
     })),
-    createdAt: new Date(Date.now() - 3600000 * 24 * 15),
+    createdAt: new Date(Date.now() - 3600000 * 24 * 15).toISOString(),
   },
 ];
 
@@ -242,7 +242,32 @@ export async function getProducts(filters?: {
     });
 
     if (products.length > 0) {
-      return products as unknown as ProductData[];
+      return products.map(prod => ({
+        id: prod.id,
+        code: prod.code,
+        name: prod.name,
+        description: prod.description,
+        price: prod.price,
+        category: {
+          id: prod.category.id,
+          name: prod.category.name,
+          slug: prod.category.slug,
+        },
+        collection: prod.collection ? {
+          id: prod.collection.id,
+          name: prod.collection.name,
+          slug: prod.collection.slug,
+          description: prod.collection.description,
+        } : null,
+        images: prod.images.map(img => ({
+          id: img.id,
+          url: img.url,
+          thumbnail: img.thumbnail,
+          original: img.original,
+          isPrimary: img.isPrimary,
+        })),
+        createdAt: prod.createdAt.toISOString(),
+      }));
     }
 
     // If query was empty but filters were applied, return filtered mock data
@@ -270,7 +295,32 @@ export async function getProductById(id: string): Promise<ProductData | null> {
     });
 
     if (product) {
-      return product as unknown as ProductData;
+      return {
+        id: product.id,
+        code: product.code,
+        name: product.name,
+        description: product.description,
+        price: product.price,
+        category: {
+          id: product.category.id,
+          name: product.category.name,
+          slug: product.category.slug,
+        },
+        collection: product.collection ? {
+          id: product.collection.id,
+          name: product.collection.name,
+          slug: product.collection.slug,
+          description: product.collection.description,
+        } : null,
+        images: product.images.map(img => ({
+          id: img.id,
+          url: img.url,
+          thumbnail: img.thumbnail,
+          original: img.original,
+          isPrimary: img.isPrimary,
+        })),
+        createdAt: product.createdAt.toISOString(),
+      };
     }
   } catch {
     console.warn(`Database query failed for product ID ${id}, searching in mock data.`);
@@ -315,7 +365,7 @@ function getFilteredMockProducts(filters?: {
     list.sort((a, b) => a.name.localeCompare(b.name));
   } else {
     // Default latest
-    list.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
   return list;

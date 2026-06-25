@@ -25,6 +25,10 @@ export async function createProduct(formData: FormData) {
   const imageFiles = formData.getAll('images') as File[];
   const validFiles = imageFiles.filter((file) => file.name && file.size > 0);
 
+console.log("=== PRODUCT CREATE ===");
+console.log("categoryId:", categoryId);
+console.log("collectionId:", collectionId);
+
   try {
     // 1. Create the product first
     const product = await prisma.product.create({

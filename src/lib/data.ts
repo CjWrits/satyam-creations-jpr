@@ -168,7 +168,13 @@ export async function getCategories(): Promise<CategoryData[]> {
     const cats = await prisma.category.findMany({
       orderBy: { name: 'asc' },
     });
-    if (cats.length > 0) return cats;
+    if (cats.length > 0) {
+      return cats.map(c => ({
+        id: c.id,
+        name: c.name,
+        slug: c.slug,
+      }));
+    }
     return MOCK_CATEGORIES;
   } catch {
     console.warn('Database query failed for categories, falling back to mock data.');
@@ -184,7 +190,14 @@ export async function getCollections(): Promise<CollectionData[]> {
     const cols = await prisma.collection.findMany({
       orderBy: { name: 'asc' },
     });
-    if (cols.length > 0) return cols;
+    if (cols.length > 0) {
+      return cols.map(c => ({
+        id: c.id,
+        name: c.name,
+        slug: c.slug,
+        description: c.description,
+      }));
+    }
     return MOCK_COLLECTIONS;
   } catch {
     console.warn('Database query failed for collections, falling back to mock data.');

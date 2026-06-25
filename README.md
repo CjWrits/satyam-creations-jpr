@@ -103,7 +103,7 @@ Create a `.env` file at the root of the project (this file is excluded from Git 
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/satyamcatalog?schema=public"
 SESSION_SECRET="your-secure-32-character-session-secret-key"
 ADMIN_EMAIL="admin@satyamcreations.com"
-ADMIN_PASSWORD="AdminPassword123!"
+ADMIN_PASSWORD="admin-password!"
 ```
 
 ### 3. Generate Database Client & Seed

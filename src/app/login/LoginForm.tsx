@@ -64,7 +64,7 @@ export default function LoginForm({ callbackUrl }: { callbackUrl: string }) {
               type="email"
               name="email"
               required
-              placeholder="admin@kurticatalog.com"
+              placeholder="admin-login"
               className="w-full pl-10 pr-4 py-3 bg-white/40 border border-gold/20 rounded-lg text-sm text-soft-black placeholder-soft-black/40 focus:outline-none focus:ring-1 focus:ring-gold focus:border-gold transition-all"
             />
           </div>

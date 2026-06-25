@@ -6,9 +6,14 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('Seeding database...');
 
-  // 1. Create Default Admin User
-  const adminEmail = process.env.ADMIN_EMAIL || 'admin@kurticatalog.com';
-  const adminPassword = process.env.ADMIN_PASSWORD || 'AdminPassword123!';
+  const adminEmail = process.env.ADMIN_EMAIL;
+  const adminPassword = process.env.ADMIN_PASSWORD;
+
+  if (!adminEmail || !adminPassword) {
+    throw new Error(
+      'ADMIN_EMAIL and ADMIN_PASSWORD environment variables are required.'
+    );
+  }
 
   const existingAdmin = await prisma.user.findUnique({
     where: { email: adminEmail },
@@ -16,6 +21,7 @@ async function main() {
 
   if (!existingAdmin) {
     const hashedPassword = await bcrypt.hash(adminPassword, 10);
+
     const admin = await prisma.user.create({
       data: {
         email: adminEmail,
@@ -24,12 +30,12 @@ async function main() {
         role: 'ADMIN',
       },
     });
+
     console.log(`Admin user created: ${admin.email}`);
   } else {
     console.log('Admin user already exists.');
   }
 
-  // 2. Create Default Categories
   const categories = [
     { name: 'Anarkali', slug: 'anarkali' },
     { name: 'Straight Cut', slug: 'straight-cut' },
@@ -38,7 +44,6 @@ async function main() {
     { name: 'Angrakha', slug: 'angrakha' },
   ];
 
-  console.log('Seeding categories...');
   for (const cat of categories) {
     await prisma.category.upsert({
       where: { name: cat.name },
@@ -47,15 +52,33 @@ async function main() {
     });
   }
 
-  // 3. Create Default Collections
   const collections = [
-    { name: 'Royal Heritage', slug: 'royal-heritage', description: 'Timeless masterpieces inspired by Rajasthani palace artistry.' },
-    { name: 'Velvet Dreams', slug: 'velvet-dreams', description: 'Plush velvet designs detailed with hand-embroidered Zardozi.' },
-    { name: 'Summer Breeze', slug: 'summer-breeze', description: 'Lightweight linen and pure cotton kurtas for breezy summer afternoons.' },
-    { name: 'Festive Glamour', slug: 'festive-glamour', description: 'Intricate ethnic wear featuring gold foil prints and heavy zari borders.' },
+    {
+      name: 'Royal Heritage',
+      slug: 'royal-heritage',
+      description:
+        'Timeless masterpieces inspired by Rajasthani palace artistry.',
+    },
+    {
+      name: 'Velvet Dreams',
+      slug: 'velvet-dreams',
+      description:
+        'Plush velvet designs detailed with hand-embroidered Zardozi.',
+    },
+    {
+      name: 'Summer Breeze',
+      slug: 'summer-breeze',
+      description:
+        'Lightweight linen and pure cotton kurtas for breezy summer afternoons.',
+    },
+    {
+      name: 'Festive Glamour',
+      slug: 'festive-glamour',
+      description:
+        'Intricate ethnic wear featuring gold foil prints and heavy zari borders.',
+    },
   ];
 
-  console.log('Seeding collections...');
   for (const col of collections) {
     await prisma.collection.upsert({
       where: { name: col.name },

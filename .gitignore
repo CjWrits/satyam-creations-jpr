@@ -40,7 +40,7 @@ yarn-error.log*
 ..env
 
 # uploads
-/public/uploads/
+/<upload-directory>/
 
 # vercel
 .vercel

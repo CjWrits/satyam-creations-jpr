@@ -65,7 +65,7 @@ To connect this application to a hosted **Supabase PostgreSQL** database:
 ## 🖼 Production Image Storage Strategy
 
 ### Current Setup (Disk Storage)
-Images uploaded via the Admin Panel or bulk upload pipeline are optimized into WebP format and saved locally to `/public/uploads/` on the server filesystem.
+Images uploaded via the Admin Panel or bulk upload pipeline are optimized into WebP format and saved locally to `/<upload-directory>/` on the server filesystem.
 
 ### The Serverless File Ephemerality Issue
 If you host the Next.js app on **Vercel** or **Netlify** (which run on serverless functions), files written to the local disk are temporary and will be deleted when the server container recycling occurs.

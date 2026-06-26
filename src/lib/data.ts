@@ -349,9 +349,9 @@ export async function getProducts(filters?: {
       } : null,
       images: prod.images.map(img => ({
         id: img.id,
-        url: img.url,
-        thumbnail: img.thumbnail,
-        original: img.original,
+        url: '', // Exclude large optimized base64 image from lists to keep HTML payloads under 150KB
+        thumbnail: img.thumbnail, // Kept since grids only render thumbnails
+        original: '', // Exclude raw backup base64 image from lists to keep HTML payloads under 150KB
         isPrimary: img.isPrimary,
       })),
       createdAt: prod.createdAt.toISOString(),

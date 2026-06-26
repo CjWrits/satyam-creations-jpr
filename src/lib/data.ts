@@ -161,74 +161,82 @@ const MOCK_PRODUCTS: ProductData[] = [
 ];
 
 let isSeeded = false;
+let seedingPromise: Promise<void> | null = null;
 
 async function seedDefaultData() {
   if (isSeeded) return;
-  try {
-    const catCount = await prisma.category.count();
-    const colCount = await prisma.collection.count();
-    const prodCount = await prisma.product.count();
+  if (seedingPromise) return seedingPromise;
 
-    // Only seed mock data if the database is completely empty (brand new deploy)
-    if (catCount === 0 && colCount === 0 && prodCount === 0) {
-      console.log('Database is completely empty. Auto-seeding default categories, collections, and products...');
-      
-      // 1. Seed categories
-      await prisma.category.createMany({
-        data: MOCK_CATEGORIES.map((c) => ({
-          id: c.id,
-          name: c.name,
-          slug: c.slug,
-        })),
-      });
+  seedingPromise = (async () => {
+    try {
+      const catCount = await prisma.category.count();
+      const colCount = await prisma.collection.count();
+      const prodCount = await prisma.product.count();
 
-      // 2. Seed collections
-      await prisma.collection.createMany({
-        data: MOCK_COLLECTIONS.map((c) => ({
-          id: c.id,
-          name: c.name,
-          slug: c.slug,
-          description: c.description,
-        })),
-      });
-
-      // 3. Seed products
-      for (const p of MOCK_PRODUCTS) {
-        await prisma.product.create({
-          data: {
-            id: p.id,
-            code: p.code,
-            name: p.name,
-            description: p.description,
-            price: p.price,
-            categoryId: p.category.id,
-            collectionId: p.collection?.id || null,
-          },
+      // Only seed mock data if the database is completely empty (brand new deploy)
+      if (catCount === 0 && colCount === 0 && prodCount === 0) {
+        console.log('Database is completely empty. Auto-seeding default categories, collections, and products...');
+        
+        // 1. Seed categories
+        await prisma.category.createMany({
+          data: MOCK_CATEGORIES.map((c) => ({
+            id: c.id,
+            name: c.name,
+            slug: c.slug,
+          })),
         });
 
-        if (p.images && p.images.length > 0) {
-          await prisma.image.createMany({
-            data: p.images.map((img, idx) => ({
-              id: img.id,
-              productId: p.id,
-              url: img.url,
-              thumbnail: img.thumbnail,
-              original: img.original,
-              isPrimary: img.isPrimary,
-              order: idx,
-            })),
-          });
-        }
-      }
-      console.log('Database auto-seeding completed successfully.');
-    } else {
-      console.log('Database contains existing user data. Skipping auto-seeding.');
-    }
+        // 2. Seed collections
+        await prisma.collection.createMany({
+          data: MOCK_COLLECTIONS.map((c) => ({
+            id: c.id,
+            name: c.name,
+            slug: c.slug,
+            description: c.description,
+          })),
+        });
 
-    isSeeded = true;
-  } catch (error) {
-    console.error('Error during auto-seeding default data:', error);
-  }
+        // 3. Seed products
+        for (const p of MOCK_PRODUCTS) {
+          await prisma.product.create({
+            data: {
+              id: p.id,
+              code: p.code,
+              name: p.name,
+              description: p.description,
+              price: p.price,
+              categoryId: p.category.id,
+              collectionId: p.collection?.id || null,
+            },
+          });
+
+          if (p.images && p.images.length > 0) {
+            await prisma.image.createMany({
+              data: p.images.map((img, idx) => ({
+                id: img.id,
+                productId: p.id,
+                url: img.url,
+                thumbnail: img.thumbnail,
+                original: img.original,
+                isPrimary: img.isPrimary,
+                order: idx,
+              })),
+            });
+          }
+        }
+        console.log('Database auto-seeding completed successfully.');
+      } else {
+        console.log('Database contains existing user data. Skipping auto-seeding.');
+      }
+      isSeeded = true;
+    } catch (error) {
+      console.error('Error during auto-seeding default data:', error);
+    } finally {
+      seedingPromise = null;
+    }
+  })();
+
+  return seedingPromise;
 }
 
 /**

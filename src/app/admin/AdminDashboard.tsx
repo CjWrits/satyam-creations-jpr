@@ -60,6 +60,8 @@ export default function AdminDashboard({ initialProducts, categories, collection
       if (res.success) {
         setSuccessMsg(`Category "${newCatName}" added successfully.`);
         setNewCatName('');
+      } else {
+        setErrorMsg(res.error || 'Failed to create category.');
       }
     } catch (err: unknown) {
       const error = err as Error;
@@ -72,8 +74,12 @@ export default function AdminDashboard({ initialProducts, categories, collection
     if (!confirm('Are you sure you want to delete this category?')) return;
     clearMessages();
     try {
-      await deleteCategory(id);
-      setSuccessMsg('Category deleted successfully.');
+      const res = await deleteCategory(id);
+      if (res.success) {
+        setSuccessMsg('Category deleted successfully.');
+      } else {
+        setErrorMsg(res.error || 'Failed to delete category.');
+      }
     } catch (err: unknown) {
       const error = err as Error;
       setErrorMsg(error.message || 'Failed to delete category.');
@@ -92,6 +98,8 @@ export default function AdminDashboard({ initialProducts, categories, collection
         setSuccessMsg(`Collection "${newColName}" added successfully.`);
         setNewColName('');
         setNewColDesc('');
+      } else {
+        setErrorMsg(res.error || 'Failed to create collection.');
       }
     } catch (err: unknown) {
       const error = err as Error;
@@ -104,8 +112,12 @@ export default function AdminDashboard({ initialProducts, categories, collection
     if (!confirm('Are you sure you want to delete this collection?')) return;
     clearMessages();
     try {
-      await deleteCollection(id);
-      setSuccessMsg('Collection deleted successfully.');
+      const res = await deleteCollection(id);
+      if (res.success) {
+        setSuccessMsg('Collection deleted successfully.');
+      } else {
+        setErrorMsg(res.error || 'Failed to delete collection.');
+      }
     } catch (err: unknown) {
       const error = err as Error;
       setErrorMsg(error.message || 'Failed to delete collection.');
@@ -126,6 +138,8 @@ export default function AdminDashboard({ initialProducts, categories, collection
           setSuccessMsg('Product created successfully with optimized images.');
           form.reset();
           setActiveTab('products');
+        } else {
+          setErrorMsg(res.error || 'Failed to create product.');
         }
       } catch (err: unknown) {
         const error = err as Error;
@@ -199,6 +213,8 @@ export default function AdminDashboard({ initialProducts, categories, collection
           setEditingProduct(null);
           setRemovedImageIds([]);
           setPrimaryImageId('');
+        } else {
+          setErrorMsg(res.error || 'Failed to update product.');
         }
       } catch (err: unknown) {
         const error = err as Error;
@@ -212,8 +228,12 @@ export default function AdminDashboard({ initialProducts, categories, collection
     if (!confirm('Are you sure you want to delete this product? All files on disk will be removed.')) return;
     clearMessages();
     try {
-      await deleteProduct(id);
-      setSuccessMsg('Product deleted from database and disk.');
+      const res = await deleteProduct(id);
+      if (res.success) {
+        setSuccessMsg('Product deleted from database and disk.');
+      } else {
+        setErrorMsg(res.error || 'Failed to delete product.');
+      }
     } catch (err: unknown) {
       const error = err as Error;
       setErrorMsg(error.message || 'Failed to delete product.');
@@ -525,7 +545,7 @@ export default function AdminDashboard({ initialProducts, categories, collection
                           <td className="py-3 px-2 text-soft-black/60">{prod.category.name}</td>
                           <td className="py-3 px-2 text-soft-black/60">{prod.collection?.name || '-'}</td>
                           <td className="py-3 px-2 font-serif text-maroon">
-                            {prod.price !== null ? `₹${prod.price.toLocaleString('en-IN')}` : '-'}
+                            {typeof prod.price === 'number' ? `₹${prod.price.toLocaleString('en-IN')}` : '-'}
                           </td>
                           <td className="py-3 px-2 text-right">
                             <div className="inline-flex space-x-2">

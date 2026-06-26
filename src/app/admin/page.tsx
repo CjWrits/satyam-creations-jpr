@@ -8,11 +8,23 @@ export default async function AdminPage() {
   const session = await getSession();
 
   // Load all current stocks, silhouettes and collections
-  const [products, categories, collections] = await Promise.all([
-    getProducts({ sortBy: 'latest' }),
-    getCategories(),
-    getCollections(),
-  ]);
+  let products = [];
+  let categories = [];
+  let collections = [];
+
+  try {
+    const [p, cat, col] = await Promise.all([
+      getProducts({ sortBy: 'latest' }),
+      getCategories(),
+      getCollections(),
+    ]);
+    products = p;
+    categories = cat;
+    collections = col;
+  } catch (error) {
+    console.error('SERVER RENDER ERROR: Data fetching failed in admin page.tsx:', error);
+    throw error;
+  }
 
   return (
     <div className="min-h-screen bg-ivory flex flex-col font-sans">

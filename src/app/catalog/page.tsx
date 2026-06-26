@@ -25,16 +25,28 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
   const sortByFilter = resolvedSearchParams?.sortBy;
 
   // Parallel data fetching
-  const [categories, collections, products] = await Promise.all([
-    getCategories(),
-    getCollections(),
-    getProducts({
-      categoryId: categoryFilter,
-      collectionId: collectionFilter,
-      search: searchFilter,
-      sortBy: sortByFilter,
-    }),
-  ]);
+  let categories = [];
+  let collections = [];
+  let products = [];
+
+  try {
+    const [cats, cols, prods] = await Promise.all([
+      getCategories(),
+      getCollections(),
+      getProducts({
+        categoryId: categoryFilter,
+        collectionId: collectionFilter,
+        search: searchFilter,
+        sortBy: sortByFilter,
+      }),
+    ]);
+    categories = cats;
+    collections = cols;
+    products = prods;
+  } catch (error) {
+    console.error('SERVER RENDER ERROR: Data fetching failed in catalog page.tsx:', error);
+    throw error;
+  }
 
   return (
     <div className="min-h-screen bg-ivory flex flex-col font-sans">

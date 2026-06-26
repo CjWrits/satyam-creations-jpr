@@ -4,7 +4,9 @@ import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 
 export async function createCategory(name: string) {
-  if (!name.trim()) throw new Error('Category name is required.');
+  if (!name.trim()) {
+    return { success: false, error: 'Category name is required.' };
+  }
   
   const slug = name
     .toLowerCase()
@@ -21,16 +23,19 @@ export async function createCategory(name: string) {
     revalidatePath('/admin');
     return { success: true, category };
   } catch (error: unknown) {
+    console.error('SERVER ACTION ERROR: createCategory failed:', error);
     const err = error as { code?: string; message?: string };
     if (err.code === 'P2002') {
-      throw new Error('Category name or slug already exists.');
+      return { success: false, error: 'Category name or slug already exists.' };
     }
-    throw new Error(err.message || 'Failed to create category.');
+    return { success: false, error: err.message || 'Failed to create category.' };
   }
 }
 
 export async function updateCategory(id: string, name: string) {
-  if (!name.trim()) throw new Error('Category name is required.');
+  if (!name.trim()) {
+    return { success: false, error: 'Category name is required.' };
+  }
   
   const slug = name
     .toLowerCase()
@@ -48,8 +53,9 @@ export async function updateCategory(id: string, name: string) {
     revalidatePath('/admin');
     return { success: true, category };
   } catch (error: unknown) {
+    console.error('SERVER ACTION ERROR: updateCategory failed:', error);
     const err = error as { message?: string };
-    throw new Error(err.message || 'Failed to update category.');
+    return { success: false, error: err.message || 'Failed to update category.' };
   }
 }
 
@@ -60,7 +66,7 @@ export async function deleteCategory(id: string) {
       where: { categoryId: id },
     });
     if (productsCount > 0) {
-      throw new Error('Cannot delete category because it has products associated with it.');
+      return { success: false, error: 'Cannot delete category because it has products associated with it.' };
     }
 
     await prisma.category.delete({
@@ -71,7 +77,9 @@ export async function deleteCategory(id: string) {
     revalidatePath('/admin');
     return { success: true };
   } catch (error: unknown) {
+    console.error('SERVER ACTION ERROR: deleteCategory failed:', error);
     const err = error as { message?: string };
-    throw new Error(err.message || 'Failed to delete category.');
+    return { success: false, error: err.message || 'Failed to delete category.' };
   }
 }
+

@@ -8,10 +8,25 @@ import { Compass, Sparkles, Star, Shield, ArrowRight } from 'lucide-react';
 
 export default async function HomePage() {
   const session = await getSession();
-  const categories = await getCategories();
-  const collections = await getCollections();
-  const products = await getProducts({ sortBy: 'latest' });
-  const latestProducts = products.slice(0, 4); // Display 4 latest arrivals
+  let categories = [];
+  let collections = [];
+  let products = [];
+  let latestProducts = [];
+
+  try {
+    const [cats, cols, prods] = await Promise.all([
+      getCategories(),
+      getCollections(),
+      getProducts({ sortBy: 'latest' }),
+    ]);
+    categories = cats;
+    collections = cols;
+    products = prods;
+    latestProducts = products.slice(0, 4);
+  } catch (error) {
+    console.error('SERVER RENDER ERROR: Data fetching failed in home page.tsx:', error);
+    throw error;
+  }
 
   // Luxury visual image for the hero section banner (from Unsplash)
   const heroImage = 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=1600&auto=format&fit=crop&q=80';

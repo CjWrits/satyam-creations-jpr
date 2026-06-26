@@ -68,7 +68,7 @@ export default function ProductCard({ product, index }: ProductCardProps) {
           {product.description || 'No description available for this handcrafted ethnic piece.'}
         </p>
 
-        {product.price !== null && (
+        {typeof product.price === 'number' && (
           <div className="mt-4 pt-3 border-t border-gold/10 flex items-center justify-between">
             <span className="text-[10px] uppercase font-light tracking-wider text-soft-black/40">Reference Value</span>
             <span className="font-serif text-sm font-light text-maroon">

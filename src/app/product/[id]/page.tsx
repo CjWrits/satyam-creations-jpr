@@ -15,7 +15,14 @@ export default async function ProductDetailsPage({ params }: ProductDetailsPageP
   
   // Resolve async route params for Next.js 15
   const resolvedParams = await params;
-  const product = await getProductById(resolvedParams.id);
+  let product = null;
+
+  try {
+    product = await getProductById(resolvedParams.id);
+  } catch (error) {
+    console.error(`SERVER RENDER ERROR: Fetching product by ID ${resolvedParams.id} failed in product/[id]/page.tsx:`, error);
+    throw error;
+  }
 
   if (!product) {
     notFound();
@@ -76,7 +83,7 @@ export default async function ProductDetailsPage({ params }: ProductDetailsPageP
             </p>
 
             {/* Reference Value */}
-            {product.price !== null && (
+            {typeof product.price === 'number' && (
               <div className="py-4 border-y border-gold/10 flex items-center justify-between">
                 <span className="text-xs uppercase tracking-wider font-light text-soft-black/50">Reference Value</span>
                 <span className="font-serif text-2xl font-light text-maroon">

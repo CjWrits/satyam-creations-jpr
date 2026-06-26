@@ -8,28 +8,28 @@ import { revalidatePath } from 'next/cache';
  * Creates a new product.
  */
 export async function createProduct(formData: FormData) {
-  const code = formData.get('code') as string;
-  const name = formData.get('name') as string;
-  const description = formData.get('description') as string;
-  const priceStr = formData.get('price') as string;
-  const categoryId = formData.get('categoryId') as string;
-  const collectionId = formData.get('collectionId') as string;
-
-  const price = priceStr ? parseFloat(priceStr) : null;
-
-  if (!code || !name || !categoryId) {
-    throw new Error('Code, Name, and Category are required.');
-  }
-
-  // Handle uploaded images
-  const imageFiles = formData.getAll('images') as File[];
-  const validFiles = imageFiles.filter((file) => file.name && file.size > 0);
-
-console.log("=== PRODUCT CREATE ===");
-console.log("categoryId:", categoryId);
-console.log("collectionId:", collectionId);
-
   try {
+    const code = formData.get('code') as string;
+    const name = formData.get('name') as string;
+    const description = formData.get('description') as string;
+    const priceStr = formData.get('price') as string;
+    const categoryId = formData.get('categoryId') as string;
+    const collectionId = formData.get('collectionId') as string;
+
+    const price = priceStr ? parseFloat(priceStr) : null;
+
+    if (!code || !name || !categoryId) {
+      return { success: false, error: 'Code, Name, and Category are required.' };
+    }
+
+    // Handle uploaded images
+    const imageFiles = formData.getAll('images') as File[];
+    const validFiles = imageFiles.filter((file) => file.name && file.size > 0);
+
+    console.log("=== PRODUCT CREATE ===");
+    console.log("categoryId:", categoryId);
+    console.log("collectionId:", collectionId);
+
     // 1. Create the product first
     const product = await prisma.product.create({
       data: {
@@ -74,11 +74,12 @@ console.log("collectionId:", collectionId);
     revalidatePath('/admin');
     return { success: true, productId: product.id };
   } catch (error: unknown) {
+    console.error('SERVER ACTION ERROR: createProduct failed:', error);
     const err = error as { code?: string; message?: string };
     if (err.code === 'P2002') {
-      throw new Error('Product code already exists. Every product must have a unique code.');
+      return { success: false, error: 'Product code already exists. Every product must have a unique code.' };
     }
-    throw new Error(err.message || 'Failed to create product.');
+    return { success: false, error: err.message || 'Failed to create product.' };
   }
 }
 
@@ -86,30 +87,30 @@ console.log("collectionId:", collectionId);
  * Updates an existing product.
  */
 export async function updateProduct(id: string, formData: FormData) {
-  const code = formData.get('code') as string;
-  const name = formData.get('name') as string;
-  const description = formData.get('description') as string;
-  const priceStr = formData.get('price') as string;
-  const categoryId = formData.get('categoryId') as string;
-  const collectionId = formData.get('collectionId') as string;
-  
-  const price = priceStr ? parseFloat(priceStr) : null;
-
-  if (!code || !name || !categoryId) {
-    throw new Error('Code, Name, and Category are required.');
-  }
-
-  // Images to remove
-  const removedImageIds = JSON.parse((formData.get('removedImageIds') as string) || '[]') as string[];
-
-  // New images to add
-  const newImageFiles = formData.getAll('images') as File[];
-  const validNewFiles = newImageFiles.filter((file) => file.name && file.size > 0);
-
-  // Index of primary image if updated
-  const primaryImageId = formData.get('primaryImageId') as string;
-
   try {
+    const code = formData.get('code') as string;
+    const name = formData.get('name') as string;
+    const description = formData.get('description') as string;
+    const priceStr = formData.get('price') as string;
+    const categoryId = formData.get('categoryId') as string;
+    const collectionId = formData.get('collectionId') as string;
+    
+    const price = priceStr ? parseFloat(priceStr) : null;
+
+    if (!code || !name || !categoryId) {
+      return { success: false, error: 'Code, Name, and Category are required.' };
+    }
+
+    // Images to remove
+    const removedImageIds = JSON.parse((formData.get('removedImageIds') as string) || '[]') as string[];
+
+    // New images to add
+    const newImageFiles = formData.getAll('images') as File[];
+    const validNewFiles = newImageFiles.filter((file) => file.name && file.size > 0);
+
+    // Index of primary image if updated
+    const primaryImageId = formData.get('primaryImageId') as string;
+
     // 1. Delete removed images from disk and DB
     if (removedImageIds.length > 0) {
       const imagesToDelete = await prisma.image.findMany({
@@ -206,11 +207,12 @@ export async function updateProduct(id: string, formData: FormData) {
     revalidatePath('/admin');
     return { success: true };
   } catch (error: unknown) {
+    console.error('SERVER ACTION ERROR: updateProduct failed:', error);
     const err = error as { code?: string; message?: string };
     if (err.code === 'P2002') {
-      throw new Error('Product code already exists.');
+      return { success: false, error: 'Product code already exists.' };
     }
-    throw new Error(err.message || 'Failed to update product.');
+    return { success: false, error: err.message || 'Failed to update product.' };
   }
 }
 
@@ -238,8 +240,9 @@ export async function deleteProduct(id: string) {
     revalidatePath('/admin');
     return { success: true };
   } catch (error: unknown) {
+    console.error('SERVER ACTION ERROR: deleteProduct failed:', error);
     const err = error as { message?: string };
-    throw new Error(err.message || 'Failed to delete product.');
+    return { success: false, error: err.message || 'Failed to delete product.' };
   }
 }
 
@@ -252,11 +255,19 @@ export async function bulkUploadProducts(categoryId: string, collectionId: strin
   const validFiles = files.filter((file) => file.name && file.size > 0);
 
   if (!categoryId) {
-    throw new Error('Category is required for bulk upload.');
+    return {
+      total: 0,
+      success: 0,
+      errors: ['Category is required for bulk upload.'],
+    };
   }
 
   if (validFiles.length === 0) {
-    throw new Error('No images selected.');
+    return {
+      total: 0,
+      success: 0,
+      errors: ['No images selected.'],
+    };
   }
 
   const results = {
@@ -307,7 +318,7 @@ export async function bulkUploadProducts(categoryId: string, collectionId: strin
       results.success++;
     } catch (err: unknown) {
       const error = err as { message?: string };
-      console.error(`Bulk upload failed for ${file.name}:`, err);
+      console.error(`SERVER ACTION ERROR: Bulk upload failed for ${file.name}:`, err);
       results.errors.push(`${file.name}: ${error.message || 'Unknown error'}`);
     }
   }
@@ -318,3 +329,4 @@ export async function bulkUploadProducts(categoryId: string, collectionId: strin
 
   return results;
 }
+

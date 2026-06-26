@@ -244,7 +244,6 @@ async function seedDefaultData() {
  */
 export async function getCategories(): Promise<CategoryData[]> {
   try {
-    await seedDefaultData();
     const cats = await prisma.category.findMany({
       orderBy: { name: 'asc' },
     });
@@ -264,7 +263,6 @@ export async function getCategories(): Promise<CategoryData[]> {
  */
 export async function getCollections(): Promise<CollectionData[]> {
   try {
-    await seedDefaultData();
     const cols = await prisma.collection.findMany({
       orderBy: { name: 'asc' },
     });
@@ -367,7 +365,6 @@ export async function getProducts(filters?: {
  */
 export async function getProductById(id: string): Promise<ProductData | null> {
   try {
-    await seedDefaultData();
     const product = await prisma.product.findUnique({
       where: { id },
       include: {

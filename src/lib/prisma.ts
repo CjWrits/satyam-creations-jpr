@@ -12,4 +12,6 @@ const prisma = globalThis.prisma ?? prismaClientSingleton();
 
 export default prisma;
 
-if (process.env.NODE_ENV !== 'production') globalThis.prisma = prisma;
+// Unconditionally store on globalThis to prevent connection leaks across
+// serverless container warm starts in both development and production.
+globalThis.prisma = prisma;

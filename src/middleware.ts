@@ -27,6 +27,12 @@ export async function middleware(request: NextRequest) {
 
   // 1. If not authenticated and trying to access a protected path, redirect to login
   if (!sessionPayload && !isPublicPath) {
+    if (request.headers.has('next-action')) {
+      return new NextResponse(
+        JSON.stringify({ success: false, error: 'Session expired. Please log in again.' }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
     const loginUrl = new URL('/login', request.url);
     // Keep track of the original page to redirect back after login
     if (pathname !== '/' && pathname !== '/login') {
@@ -42,6 +48,14 @@ export async function middleware(request: NextRequest) {
 
     // If session has expired, clear the cookie and redirect to login
     if (expiresAt < new Date()) {
+      if (request.headers.has('next-action')) {
+        const response = new NextResponse(
+          JSON.stringify({ success: false, error: 'Session expired. Please log in again.' }),
+          { status: 401, headers: { 'Content-Type': 'application/json' } }
+        );
+        response.cookies.delete('session');
+        return response;
+      }
       const response = NextResponse.redirect(new URL('/login', request.url));
       response.cookies.delete('session');
       return response;
@@ -54,6 +68,12 @@ export async function middleware(request: NextRequest) {
 
     // Protect admin routes
     if (pathname.startsWith('/admin') && role !== 'ADMIN') {
+      if (request.headers.has('next-action')) {
+        return new NextResponse(
+          JSON.stringify({ success: false, error: 'Forbidden: Admin access required.' }),
+          { status: 403, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
       return NextResponse.redirect(new URL('/', request.url));
     }
 

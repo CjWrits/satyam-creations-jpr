@@ -282,8 +282,10 @@ export async function deleteProduct(id: string) {
  * Bulk product creation: creates a product for each uploaded image.
  * Code and name are derived from the image filename.
  */
-export async function bulkUploadProducts(categoryId: string, collectionId: string | null, imageFilesFormData: FormData) {
-  const files = imageFilesFormData.getAll('images') as File[];
+export async function bulkUploadProducts(formData: FormData) {
+  const categoryId = formData.get('categoryId') as string;
+  const collectionId = formData.get('collectionId') as string;
+  const files = formData.getAll('images') as File[];
   const validFiles = files.filter((file) => file.name && file.size > 0);
 
   const cleanCategoryId = 

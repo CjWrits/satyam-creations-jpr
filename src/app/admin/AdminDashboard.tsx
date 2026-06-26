@@ -197,11 +197,15 @@ export default function AdminDashboard({ initialProducts, categories, collection
 
     // Wrap upload files in custom FormData
     const uploadData = new FormData();
+    uploadData.append('categoryId', catId);
+    if (colId) {
+      uploadData.append('collectionId', colId);
+    }
     files.forEach((f) => uploadData.append('images', f));
 
     startTransition(async () => {
       try {
-        const res = await bulkUploadProducts(catId, colId || null, uploadData);
+        const res = await bulkUploadProducts(uploadData);
         setSuccessMsg(`Bulk upload complete. Successfully created ${res.success} of ${res.total} products.`);
         if (res.errors.length > 0) {
           setErrorMsg(`Failed items:\n${res.errors.join('\n')}`);

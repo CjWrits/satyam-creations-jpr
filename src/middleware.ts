@@ -57,6 +57,12 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/', request.url));
     }
 
+    // SKIP sliding session update for Next.js Server Actions to prevent header/cookie conflicts
+    // that lead to "unexpected response was received from server" errors on POST requests.
+    if (request.headers.has('next-action')) {
+      return NextResponse.next();
+    }
+
     // Sliding session update: extend expiration if less than 25 minutes left (1500 seconds)
     // Next.js middleware allows setting cookies on the response
     const expiresTime = expiresAt.getTime();

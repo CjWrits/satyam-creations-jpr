@@ -77,6 +77,3 @@ export default function Error({
     </div>
   );
 }
-
-
-the eisnt anyu reaosn for this to work wihotut any erorrs ..but still ti has more erros tba the orking paet of thee code hence making it enough for the woking patience

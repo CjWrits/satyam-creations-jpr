@@ -129,6 +129,21 @@ export default function AdminDashboard({ initialProducts, categories, collection
     e.preventDefault();
     clearMessages();
     const form = e.currentTarget;
+    
+    // Client-side file size check for Netlify request payload limit (6MB max)
+    const imageInput = form.querySelector('input[type="file"][name="images"]') as HTMLInputElement;
+    if (imageInput && imageInput.files) {
+      let totalSize = 0;
+      for (let i = 0; i < imageInput.files.length; i++) {
+        totalSize += imageInput.files[i].size;
+      }
+      const maxBytes = 4.5 * 1024 * 1024; // 4.5 MB
+      if (totalSize > maxBytes) {
+        setErrorMsg(`The total size of selected images is ${(totalSize / (1024 * 1024)).toFixed(2)} MB. Netlify serverless functions limit uploads to 4.5 MB. Please compress your images or upload fewer at a time.`);
+        return;
+      }
+    }
+
     const formData = new FormData(form);
 
     startTransition(async () => {
@@ -169,6 +184,17 @@ export default function AdminDashboard({ initialProducts, categories, collection
       return;
     }
 
+    // Client-side file size check for Netlify request payload limit (6MB max)
+    let totalSize = 0;
+    files.forEach((f) => {
+      totalSize += f.size;
+    });
+    const maxBytes = 4.5 * 1024 * 1024; // 4.5 MB
+    if (totalSize > maxBytes) {
+      setErrorMsg(`The total size of selected images is ${(totalSize / (1024 * 1024)).toFixed(2)} MB. Netlify serverless functions limit uploads to 4.5 MB. Please upload fewer images or compress them.`);
+      return;
+    }
+
     // Wrap upload files in custom FormData
     const uploadData = new FormData();
     files.forEach((f) => uploadData.append('images', f));
@@ -197,6 +223,21 @@ export default function AdminDashboard({ initialProducts, categories, collection
     clearMessages();
 
     const form = e.currentTarget;
+    
+    // Client-side file size check for Netlify request payload limit (6MB max)
+    const imageInput = form.querySelector('input[type="file"][name="images"]') as HTMLInputElement;
+    if (imageInput && imageInput.files) {
+      let totalSize = 0;
+      for (let i = 0; i < imageInput.files.length; i++) {
+        totalSize += imageInput.files[i].size;
+      }
+      const maxBytes = 4.5 * 1024 * 1024; // 4.5 MB
+      if (totalSize > maxBytes) {
+        setErrorMsg(`The total size of selected new images is ${(totalSize / (1024 * 1024)).toFixed(2)} MB. Netlify serverless functions limit uploads to 4.5 MB. Please compress your images.`);
+        return;
+      }
+    }
+
     const formData = new FormData(form);
     
     // Add extra state arrays

@@ -165,10 +165,15 @@ let isSeeded = false;
 async function seedDefaultData() {
   if (isSeeded) return;
   try {
-    // 1. Seed categories
     const catCount = await prisma.category.count();
-    if (catCount === 0) {
-      console.log('Auto-seeding default categories...');
+    const colCount = await prisma.collection.count();
+    const prodCount = await prisma.product.count();
+
+    // Only seed mock data if the database is completely empty (brand new deploy)
+    if (catCount === 0 && colCount === 0 && prodCount === 0) {
+      console.log('Database is completely empty. Auto-seeding default categories, collections, and products...');
+      
+      // 1. Seed categories
       await prisma.category.createMany({
         data: MOCK_CATEGORIES.map((c) => ({
           id: c.id,
@@ -176,12 +181,8 @@ async function seedDefaultData() {
           slug: c.slug,
         })),
       });
-    }
 
-    // 2. Seed collections
-    const colCount = await prisma.collection.count();
-    if (colCount === 0) {
-      console.log('Auto-seeding default collections...');
+      // 2. Seed collections
       await prisma.collection.createMany({
         data: MOCK_COLLECTIONS.map((c) => ({
           id: c.id,
@@ -190,12 +191,8 @@ async function seedDefaultData() {
           description: c.description,
         })),
       });
-    }
 
-    // 3. Seed products
-    const prodCount = await prisma.product.count();
-    if (prodCount === 0) {
-      console.log('Auto-seeding default products...');
+      // 3. Seed products
       for (const p of MOCK_PRODUCTS) {
         await prisma.product.create({
           data: {
@@ -223,6 +220,9 @@ async function seedDefaultData() {
           });
         }
       }
+      console.log('Database auto-seeding completed successfully.');
+    } else {
+      console.log('Database contains existing user data. Skipping auto-seeding.');
     }
 
     isSeeded = true;

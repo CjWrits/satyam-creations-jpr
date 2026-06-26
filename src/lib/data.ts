@@ -160,24 +160,93 @@ const MOCK_PRODUCTS: ProductData[] = [
   },
 ];
 
+let isSeeded = false;
+
+async function seedDefaultData() {
+  if (isSeeded) return;
+  try {
+    // 1. Seed categories
+    const catCount = await prisma.category.count();
+    if (catCount === 0) {
+      console.log('Auto-seeding default categories...');
+      await prisma.category.createMany({
+        data: MOCK_CATEGORIES.map((c) => ({
+          id: c.id,
+          name: c.name,
+          slug: c.slug,
+        })),
+      });
+    }
+
+    // 2. Seed collections
+    const colCount = await prisma.collection.count();
+    if (colCount === 0) {
+      console.log('Auto-seeding default collections...');
+      await prisma.collection.createMany({
+        data: MOCK_COLLECTIONS.map((c) => ({
+          id: c.id,
+          name: c.name,
+          slug: c.slug,
+          description: c.description,
+        })),
+      });
+    }
+
+    // 3. Seed products
+    const prodCount = await prisma.product.count();
+    if (prodCount === 0) {
+      console.log('Auto-seeding default products...');
+      for (const p of MOCK_PRODUCTS) {
+        await prisma.product.create({
+          data: {
+            id: p.id,
+            code: p.code,
+            name: p.name,
+            description: p.description,
+            price: p.price,
+            categoryId: p.category.id,
+            collectionId: p.collection?.id || null,
+          },
+        });
+
+        if (p.images && p.images.length > 0) {
+          await prisma.image.createMany({
+            data: p.images.map((img, idx) => ({
+              id: img.id,
+              productId: p.id,
+              url: img.url,
+              thumbnail: img.thumbnail,
+              original: img.original,
+              isPrimary: img.isPrimary,
+              order: idx,
+            })),
+          });
+        }
+      }
+    }
+
+    isSeeded = true;
+  } catch (error) {
+    console.error('Error during auto-seeding default data:', error);
+  }
+}
+
 /**
  * Safe fetch for categories. Falls back to mock data if Prisma fails or is empty.
  */
 export async function getCategories(): Promise<CategoryData[]> {
   try {
+    await seedDefaultData();
     const cats = await prisma.category.findMany({
       orderBy: { name: 'asc' },
     });
-    if (cats.length > 0) {
-      return cats.map(c => ({
-        id: c.id,
-        name: c.name,
-        slug: c.slug,
-      }));
-    }
-    return MOCK_CATEGORIES;
-  } catch {
-    console.warn('Database query failed for categories, falling back to mock data.');
+    return cats.map(c => ({
+      id: c.id,
+      name: c.name,
+      slug: c.slug,
+    }));
+  } catch (error) {
+    console.warn('Database query failed for categories, falling back to mock data.', error);
     return MOCK_CATEGORIES;
   }
 }
@@ -187,20 +256,18 @@ export async function getCategories(): Promise<CategoryData[]> {
  */
 export async function getCollections(): Promise<CollectionData[]> {
   try {
+    await seedDefaultData();
     const cols = await prisma.collection.findMany({
       orderBy: { name: 'asc' },
     });
-    if (cols.length > 0) {
-      return cols.map(c => ({
-        id: c.id,
-        name: c.name,
-        slug: c.slug,
-        description: c.description,
-      }));
-    }
-    return MOCK_COLLECTIONS;
-  } catch {
-    console.warn('Database query failed for collections, falling back to mock data.');
+    return cols.map(c => ({
+      id: c.id,
+      name: c.name,
+      slug: c.slug,
+      description: c.description,
+    }));
+  } catch (error) {
+    console.warn('Database query failed for collections, falling back to mock data.', error);
     return MOCK_COLLECTIONS;
   }
 }
@@ -216,6 +283,7 @@ export async function getProducts(filters?: {
   sortBy?: 'latest' | 'price-asc' | 'price-desc' | 'name-asc';
 }): Promise<ProductData[]> {
   try {
+    await seedDefaultData();
     // Construct where clause
     const where: Prisma.ProductWhereInput = {};
     if (filters?.categoryId && filters.categoryId !== 'all') {
@@ -254,39 +322,34 @@ export async function getProducts(filters?: {
       },
     });
 
-    if (products.length > 0) {
-      return products.map(prod => ({
-        id: prod.id,
-        code: prod.code,
-        name: prod.name,
-        description: prod.description,
-        price: prod.price,
-        category: {
-          id: prod.category.id,
-          name: prod.category.name,
-          slug: prod.category.slug,
-        },
-        collection: prod.collection ? {
-          id: prod.collection.id,
-          name: prod.collection.name,
-          slug: prod.collection.slug,
-          description: prod.collection.description,
-        } : null,
-        images: prod.images.map(img => ({
-          id: img.id,
-          url: img.url,
-          thumbnail: img.thumbnail,
-          original: img.original,
-          isPrimary: img.isPrimary,
-        })),
-        createdAt: prod.createdAt.toISOString(),
-      }));
-    }
-
-    // If query was empty but filters were applied, return filtered mock data
-    return getFilteredMockProducts(filters);
-  } catch {
-    console.warn('Database query failed for products, falling back to mock data.');
+    return products.map(prod => ({
+      id: prod.id,
+      code: prod.code,
+      name: prod.name,
+      description: prod.description,
+      price: prod.price,
+      category: {
+        id: prod.category.id,
+        name: prod.category.name,
+        slug: prod.category.slug,
+      },
+      collection: prod.collection ? {
+        id: prod.collection.id,
+        name: prod.collection.name,
+        slug: prod.collection.slug,
+        description: prod.collection.description,
+      } : null,
+      images: prod.images.map(img => ({
+        id: img.id,
+        url: img.url,
+        thumbnail: img.thumbnail,
+        original: img.original,
+        isPrimary: img.isPrimary,
+      })),
+      createdAt: prod.createdAt.toISOString(),
+    }));
+  } catch (error) {
+    console.warn('Database query failed for products, falling back to mock data.', error);
     return getFilteredMockProducts(filters);
   }
 }
@@ -296,6 +359,7 @@ export async function getProducts(filters?: {
  */
 export async function getProductById(id: string): Promise<ProductData | null> {
   try {
+    await seedDefaultData();
     const product = await prisma.product.findUnique({
       where: { id },
       include: {
@@ -335,8 +399,8 @@ export async function getProductById(id: string): Promise<ProductData | null> {
         createdAt: product.createdAt.toISOString(),
       };
     }
-  } catch {
-    console.warn(`Database query failed for product ID ${id}, searching in mock data.`);
+  } catch (error) {
+    console.warn(`Database query failed for product ID ${id}, searching in mock data.`, error);
   }
 
   // Fallback to mock search

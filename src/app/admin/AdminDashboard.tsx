@@ -25,6 +25,74 @@ interface AdminDashboardProps {
 
 type TabType = 'products' | 'add-product' | 'bulk-upload' | 'categories' | 'collections';
 
+// Helper to compress an image file in the browser using HTML5 Canvas
+async function compressImageClientSide(file: File, maxWidth = 1600, maxHeight = 2400, quality = 0.8): Promise<File> {
+  return new Promise((resolve) => {
+    // If not an image, resolve with original
+    if (!file.type.startsWith('image/')) {
+      resolve(file);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new window.Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        // Resize proportionally if dimensions exceed limits
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(file);
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Convert canvas back to Blob, then File
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              resolve(file);
+              return;
+            }
+            // Construct a new jpeg File object with a similar name
+            const sanitizedName = file.name.replace(/\.[^/.]+$/, "") + ".jpg";
+            const compressedFile = new File([blob], sanitizedName, {
+              type: 'image/jpeg',
+              lastModified: Date.now(),
+            });
+            resolve(compressedFile);
+          },
+          'image/jpeg',
+          quality
+        );
+      };
+      img.onerror = () => resolve(file);
+    };
+    reader.onerror = () => resolve(file);
+  });
+}
+
 export default function AdminDashboard({ initialProducts, categories, collections }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<TabType>('products');
   const [isPending, startTransition] = useTransition();
@@ -129,26 +197,41 @@ export default function AdminDashboard({ initialProducts, categories, collection
     e.preventDefault();
     clearMessages();
     const form = e.currentTarget;
-    
-    // Client-side file size check for Netlify request payload limit (6MB max)
-    const imageInput = form.querySelector('input[type="file"][name="images"]') as HTMLInputElement;
-    if (imageInput && imageInput.files) {
-      let totalSize = 0;
-      for (let i = 0; i < imageInput.files.length; i++) {
-        totalSize += imageInput.files[i].size;
-      }
-      const maxBytes = 4.5 * 1024 * 1024; // 4.5 MB
-      if (totalSize > maxBytes) {
-        setErrorMsg(`The total size of selected images is ${(totalSize / (1024 * 1024)).toFixed(2)} MB. Netlify serverless functions limit uploads to 4.5 MB. Please compress your images or upload fewer at a time.`);
-        return;
-      }
-    }
-
     const formData = new FormData(form);
 
     startTransition(async () => {
       try {
-        const res = await createProduct(formData);
+        const submitData = new FormData();
+        
+        // Copy standard fields
+        formData.forEach((value, key) => {
+          if (key !== 'images') {
+            submitData.append(key, value);
+          }
+        });
+
+        // Compress and append images
+        const imageInput = form.querySelector('input[type="file"][name="images"]') as HTMLInputElement;
+        if (imageInput && imageInput.files && imageInput.files.length > 0) {
+          const filesArray = Array.from(imageInput.files);
+          const compressedFiles = await Promise.all(
+            filesArray.map(file => compressImageClientSide(file))
+          );
+          
+          let totalCompressedSize = 0;
+          compressedFiles.forEach(file => {
+            submitData.append('images', file);
+            totalCompressedSize += file.size;
+          });
+
+          const maxBytes = 4.5 * 1024 * 1024; // 4.5 MB
+          if (totalCompressedSize > maxBytes) {
+            setErrorMsg(`Even after compression, the total size of selected images is ${(totalCompressedSize / (1024 * 1024)).toFixed(2)} MB. Netlify serverless functions limit uploads to 4.5 MB. Please upload fewer images.`);
+            return;
+          }
+        }
+
+        const res = await createProduct(submitData);
         if (res.success) {
           setSuccessMsg('Product created successfully with optimized images.');
           form.reset();
@@ -184,27 +267,31 @@ export default function AdminDashboard({ initialProducts, categories, collection
       return;
     }
 
-    // Client-side file size check for Netlify request payload limit (6MB max)
-    let totalSize = 0;
-    files.forEach((f) => {
-      totalSize += f.size;
-    });
-    const maxBytes = 4.5 * 1024 * 1024; // 4.5 MB
-    if (totalSize > maxBytes) {
-      setErrorMsg(`The total size of selected images is ${(totalSize / (1024 * 1024)).toFixed(2)} MB. Netlify serverless functions limit uploads to 4.5 MB. Please upload fewer images or compress them.`);
-      return;
-    }
-
     // Wrap upload files in custom FormData
     const uploadData = new FormData();
     uploadData.append('categoryId', catId);
     if (colId) {
       uploadData.append('collectionId', colId);
     }
-    files.forEach((f) => uploadData.append('images', f));
 
     startTransition(async () => {
       try {
+        const compressedFiles = await Promise.all(
+          files.map(file => compressImageClientSide(file))
+        );
+
+        let totalCompressedSize = 0;
+        compressedFiles.forEach((file) => {
+          uploadData.append('images', file);
+          totalCompressedSize += file.size;
+        });
+
+        const maxBytes = 4.5 * 1024 * 1024; // 4.5 MB
+        if (totalCompressedSize > maxBytes) {
+          setErrorMsg(`Even after compression, the total size of selected images is ${(totalCompressedSize / (1024 * 1024)).toFixed(2)} MB. Netlify serverless functions limit uploads to 4.5 MB. Please upload fewer images.`);
+          return;
+        }
+
         const res = await bulkUploadProducts(uploadData);
         setSuccessMsg(`Bulk upload complete. Successfully created ${res.success} of ${res.total} products.`);
         if (res.errors.length > 0) {
@@ -227,32 +314,47 @@ export default function AdminDashboard({ initialProducts, categories, collection
     clearMessages();
 
     const form = e.currentTarget;
-    
-    // Client-side file size check for Netlify request payload limit (6MB max)
-    const imageInput = form.querySelector('input[type="file"][name="images"]') as HTMLInputElement;
-    if (imageInput && imageInput.files) {
-      let totalSize = 0;
-      for (let i = 0; i < imageInput.files.length; i++) {
-        totalSize += imageInput.files[i].size;
-      }
-      const maxBytes = 4.5 * 1024 * 1024; // 4.5 MB
-      if (totalSize > maxBytes) {
-        setErrorMsg(`The total size of selected new images is ${(totalSize / (1024 * 1024)).toFixed(2)} MB. Netlify serverless functions limit uploads to 4.5 MB. Please compress your images.`);
-        return;
-      }
-    }
-
     const formData = new FormData(form);
-    
-    // Add extra state arrays
-    formData.append('removedImageIds', JSON.stringify(removedImageIds));
-    if (primaryImageId) {
-      formData.append('primaryImageId', primaryImageId);
-    }
 
     startTransition(async () => {
       try {
-        const res = await updateProduct(editingProduct.id, formData);
+        const submitData = new FormData();
+        
+        // Copy standard fields
+        formData.forEach((value, key) => {
+          if (key !== 'images') {
+            submitData.append(key, value);
+          }
+        });
+
+        // Add extra state arrays
+        submitData.append('removedImageIds', JSON.stringify(removedImageIds));
+        if (primaryImageId) {
+          submitData.append('primaryImageId', primaryImageId);
+        }
+
+        // Compress and append new images
+        const imageInput = form.querySelector('input[type="file"][name="images"]') as HTMLInputElement;
+        if (imageInput && imageInput.files && imageInput.files.length > 0) {
+          const filesArray = Array.from(imageInput.files);
+          const compressedFiles = await Promise.all(
+            filesArray.map(file => compressImageClientSide(file))
+          );
+
+          let totalCompressedSize = 0;
+          compressedFiles.forEach(file => {
+            submitData.append('images', file);
+            totalCompressedSize += file.size;
+          });
+
+          const maxBytes = 4.5 * 1024 * 1024; // 4.5 MB
+          if (totalCompressedSize > maxBytes) {
+            setErrorMsg(`Even after compression, the total size of new selected images is ${(totalCompressedSize / (1024 * 1024)).toFixed(2)} MB. Netlify serverless functions limit uploads to 4.5 MB. Please compress your images.`);
+            return;
+          }
+        }
+
+        const res = await updateProduct(editingProduct.id, submitData);
         if (res.success) {
           setSuccessMsg('Product updated successfully.');
           setEditingProduct(null);

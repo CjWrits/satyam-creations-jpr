@@ -4,7 +4,8 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { logoutAction } from '@/app/actions/auth';
-import { Menu, X, LogOut, Shield, Compass, Home, Sparkles } from 'lucide-react';
+import Image from 'next/image';
+import { Menu, X, LogOut, Shield, Compass, Home } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface NavbarProps {
@@ -43,12 +44,18 @@ export default function Navbar({ user }: NavbarProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           {/* Brand Logo */}
-          <Link href="/" className="flex items-center space-x-2 group">
-            <span className="p-1.5 bg-maroon/10 rounded-full border border-gold/20 group-hover:border-gold/50 transition-colors">
-              <Sparkles className="w-5 h-5 text-gold" />
-            </span>
+          <Link href="/" className="flex items-center space-x-3 group">
+            <div className="relative w-9 h-9 overflow-hidden rounded-full border border-gold/25 bg-beige p-0.5 group-hover:border-gold/50 transition-all flex items-center justify-center">
+              <Image
+                src="/logo.png"
+                alt="Satyam Creations Logo"
+                width={36}
+                height={36}
+                className="object-cover rounded-full"
+              />
+            </div>
             <div className="flex flex-col">
-              <span className="font-serif text-base md:text-lg font-light tracking-[0.15em] text-maroon group-hover:text-gold transition-colors">
+              <span className="font-serif text-sm md:text-base font-light tracking-[0.15em] text-maroon group-hover:text-gold transition-colors">
                 SATYAM CREATIONS
               </span>
               <span className="text-[8px] tracking-[0.15em] font-light uppercase text-gold">

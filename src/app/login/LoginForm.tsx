@@ -2,8 +2,9 @@
 
 import { useActionState, useState } from 'react';
 import { loginAction, ActionResponse } from '@/app/actions/auth';
-import { Eye, EyeOff, Lock, Mail, Sparkles } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import { motion } from 'framer-motion';
+import Image from 'next/image';
 
 const initialState: ActionResponse = {
   success: false,
@@ -26,8 +27,14 @@ export default function LoginForm({ callbackUrl }: { callbackUrl: string }) {
       <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-maroon/5 rounded-full blur-3xl" />
 
       <div className="text-center mb-8 relative z-10">
-        <div className="inline-flex items-center justify-center p-3 rounded-full bg-maroon/10 border border-gold/30 mb-4 animate-pulse">
-          <Sparkles className="w-6 h-6 text-gold" />
+        <div className="relative w-16 h-16 mx-auto overflow-hidden rounded-full border-2 border-gold/30 bg-beige mb-4 shadow-md flex items-center justify-center">
+          <Image
+            src="/logo.png"
+            alt="Satyam Creations Logo"
+            width={64}
+            height={64}
+            className="object-cover rounded-full"
+          />
         </div>
         <h1 className="font-serif text-2xl font-light tracking-widest text-maroon mb-2">
           SATYAM CREATIONS

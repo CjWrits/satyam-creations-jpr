@@ -23,18 +23,90 @@ async function ensureDirsExist() {
   }
 }
 
+function getMimeType(ext: string): string {
+  switch (ext.toLowerCase()) {
+    case '.jpg':
+    case '.jpeg':
+      return 'image/jpeg';
+    case '.png':
+      return 'image/png';
+    case '.webp':
+      return 'image/webp';
+    case '.avif':
+      return 'image/avif';
+    case '.svg':
+      return 'image/svg+xml';
+    default:
+      return 'image/jpeg';
+  }
+}
+
 export async function processImage(
   buffer: Buffer,
   originalFilename: string
 ): Promise<ProcessedImages> {
-  await ensureDirsExist();
+  let useBase64 = false;
 
-  const uniqueId = uuidv4();
+  if (!UPLOAD_DIR) {
+    useBase64 = true;
+  } else {
+    try {
+      await ensureDirsExist();
+    } catch {
+      console.warn('Directory creation failed. Falling back to database Base64 storage.');
+      useBase64 = true;
+    }
+  }
+
   const fileExt = path.extname(originalFilename);
   const baseName = path
     .basename(originalFilename, fileExt)
     .replace(/[^a-zA-Z0-9]/g, '_');
 
+  if (useBase64) {
+    // 1. Generate optimized WebP buffer
+    const optimizedBuffer = await sharp(buffer)
+      .resize({
+        width: 1600,
+        height: 2400,
+        fit: 'inside',
+        withoutEnlargement: true,
+      })
+      .webp({ quality: 80 })
+      .toBuffer();
+
+    // 2. Generate WebP thumbnail
+    const thumbnailBuffer = await sharp(buffer)
+      .resize({
+        width: 400,
+        height: 600,
+        fit: 'inside',
+        withoutEnlargement: true,
+      })
+      .webp({ quality: 75 })
+      .toBuffer();
+
+    // 3. For original, compress it if it is very large (> 4MB) to protect database columns
+    let originalBase64 = '';
+    if (buffer.length > 4 * 1024 * 1024) {
+      const compressedOriginal = await sharp(buffer)
+        .webp({ quality: 60 })
+        .toBuffer();
+      originalBase64 = `data:image/webp;base64,${compressedOriginal.toString('base64')}`;
+    } else {
+      const mimeType = getMimeType(fileExt);
+      originalBase64 = `data:${mimeType};base64,${buffer.toString('base64')}`;
+    }
+
+    return {
+      original: originalBase64,
+      url: `data:image/webp;base64,${optimizedBuffer.toString('base64')}`,
+      thumbnail: `data:image/webp;base64,${thumbnailBuffer.toString('base64')}`,
+    };
+  }
+
+  // Standard File System Storage
+  const uniqueId = uuidv4();
   const originalFilenameUnique = `${uniqueId}-${baseName}${fileExt}`;
   const optimizedFilename = `${uniqueId}-${baseName}.webp`;
   const thumbnailFilename = `${uniqueId}-${baseName}-thumb.webp`;
@@ -60,45 +132,74 @@ export async function processImage(
     thumbnailFilename
   );
 
-  await fs.writeFile(originalPath, buffer);
+  try {
+    await fs.writeFile(originalPath, buffer);
 
-  await sharp(buffer)
-    .resize({
-      width: 1600,
-      height: 2400,
-      fit: 'inside',
-      withoutEnlargement: true,
-    })
-    .webp({ quality: 82 })
-    .toFile(optimizedPath);
+    await sharp(buffer)
+      .resize({
+        width: 1600,
+        height: 2400,
+        fit: 'inside',
+        withoutEnlargement: true,
+      })
+      .webp({ quality: 82 })
+      .toFile(optimizedPath);
 
-  await sharp(buffer)
-    .resize({
-      width: 400,
-      height: 600,
-      fit: 'inside',
-      withoutEnlargement: true,
-    })
-    .webp({ quality: 75 })
-    .toFile(thumbnailPath);
+    await sharp(buffer)
+      .resize({
+        width: 400,
+        height: 600,
+        fit: 'inside',
+        withoutEnlargement: true,
+      })
+      .webp({ quality: 75 })
+      .toFile(thumbnailPath);
 
-  const uploadPublicPath = UPLOAD_DIR.startsWith('public')
-    ? UPLOAD_DIR.replace(/^public/, '')
-    : `/${UPLOAD_DIR}`;
+    const uploadPublicPath = UPLOAD_DIR.startsWith('public')
+      ? UPLOAD_DIR.replace(/^public/, '')
+      : `/${UPLOAD_DIR}`;
 
-  return {
-    original: path
-      .join(uploadPublicPath, 'original', originalFilenameUnique)
-      .replace(/\\/g, '/'),
+    return {
+      original: path
+        .join(uploadPublicPath, 'original', originalFilenameUnique)
+        .replace(/\\/g, '/'),
+      url: path
+        .join(uploadPublicPath, 'optimized', optimizedFilename)
+        .replace(/\\/g, '/'),
+      thumbnail: path
+        .join(uploadPublicPath, 'thumbnails', thumbnailFilename)
+        .replace(/\\/g, '/'),
+    };
+  } catch (err) {
+    console.warn('Write failed during file system processing. Reverting to Base64.', err);
+    
+    const optimizedBuffer = await sharp(buffer)
+      .resize({ width: 1600, height: 2400, fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: 80 })
+      .toBuffer();
 
-    url: path
-      .join(uploadPublicPath, 'optimized', optimizedFilename)
-      .replace(/\\/g, '/'),
+    const thumbnailBuffer = await sharp(buffer)
+      .resize({ width: 400, height: 600, fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: 75 })
+      .toBuffer();
 
-    thumbnail: path
-      .join(uploadPublicPath, 'thumbnails', thumbnailFilename)
-      .replace(/\\/g, '/'),
-  };
+    let originalBase64 = '';
+    if (buffer.length > 4 * 1024 * 1024) {
+      const compressedOriginal = await sharp(buffer)
+        .webp({ quality: 60 })
+        .toBuffer();
+      originalBase64 = `data:image/webp;base64,${compressedOriginal.toString('base64')}`;
+    } else {
+      const mimeType = getMimeType(fileExt);
+      originalBase64 = `data:${mimeType};base64,${buffer.toString('base64')}`;
+    }
+
+    return {
+      original: originalBase64,
+      url: `data:image/webp;base64,${optimizedBuffer.toString('base64')}`,
+      thumbnail: `data:image/webp;base64,${thumbnailBuffer.toString('base64')}`,
+    };
+  }
 }
 
 export async function deleteImageFiles(

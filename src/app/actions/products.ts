@@ -18,7 +18,23 @@ export async function createProduct(formData: FormData) {
 
     const price = priceStr ? parseFloat(priceStr) : null;
 
-    if (!code || !name || !categoryId) {
+    const cleanCategoryId = 
+      typeof categoryId === 'string' && 
+      categoryId.trim() !== '' && 
+      categoryId.trim() !== 'null' && 
+      categoryId.trim() !== 'undefined' 
+        ? categoryId.trim() 
+        : null;
+
+    const cleanCollectionId = 
+      typeof collectionId === 'string' && 
+      collectionId.trim() !== '' && 
+      collectionId.trim() !== 'null' && 
+      collectionId.trim() !== 'undefined' 
+        ? collectionId.trim() 
+        : null;
+
+    if (!code || !name || !cleanCategoryId) {
       return { success: false, error: 'Code, Name, and Category are required.' };
     }
 
@@ -27,8 +43,8 @@ export async function createProduct(formData: FormData) {
     const validFiles = imageFiles.filter((file) => file.name && file.size > 0);
 
     console.log("=== PRODUCT CREATE ===");
-    console.log("categoryId:", categoryId);
-    console.log("collectionId:", collectionId);
+    console.log("categoryId:", cleanCategoryId);
+    console.log("collectionId:", cleanCollectionId);
 
     // 1. Create the product first
     const product = await prisma.product.create({
@@ -37,8 +53,8 @@ export async function createProduct(formData: FormData) {
         name: name.trim(),
         description: description?.trim() || null,
         price,
-        categoryId,
-        collectionId: collectionId || null,
+        categoryId: cleanCategoryId,
+        collectionId: cleanCollectionId,
       },
     });
 
@@ -97,7 +113,23 @@ export async function updateProduct(id: string, formData: FormData) {
     
     const price = priceStr ? parseFloat(priceStr) : null;
 
-    if (!code || !name || !categoryId) {
+    const cleanCategoryId = 
+      typeof categoryId === 'string' && 
+      categoryId.trim() !== '' && 
+      categoryId.trim() !== 'null' && 
+      categoryId.trim() !== 'undefined' 
+        ? categoryId.trim() 
+        : null;
+
+    const cleanCollectionId = 
+      typeof collectionId === 'string' && 
+      collectionId.trim() !== '' && 
+      collectionId.trim() !== 'null' && 
+      collectionId.trim() !== 'undefined' 
+        ? collectionId.trim() 
+        : null;
+
+    if (!code || !name || !cleanCategoryId) {
       return { success: false, error: 'Code, Name, and Category are required.' };
     }
 
@@ -164,8 +196,8 @@ export async function updateProduct(id: string, formData: FormData) {
         name: name.trim(),
         description: description?.trim() || null,
         price,
-        categoryId,
-        collectionId: collectionId || null,
+        categoryId: cleanCategoryId,
+        collectionId: cleanCollectionId,
       },
     });
 
@@ -254,7 +286,23 @@ export async function bulkUploadProducts(categoryId: string, collectionId: strin
   const files = imageFilesFormData.getAll('images') as File[];
   const validFiles = files.filter((file) => file.name && file.size > 0);
 
-  if (!categoryId) {
+  const cleanCategoryId = 
+    typeof categoryId === 'string' && 
+    categoryId.trim() !== '' && 
+    categoryId.trim() !== 'null' && 
+    categoryId.trim() !== 'undefined' 
+      ? categoryId.trim() 
+      : null;
+
+  const cleanCollectionId = 
+    typeof collectionId === 'string' && 
+    collectionId.trim() !== '' && 
+    collectionId.trim() !== 'null' && 
+    collectionId.trim() !== 'undefined' 
+      ? collectionId.trim() 
+      : null;
+
+  if (!cleanCategoryId) {
     return {
       total: 0,
       success: 0,
@@ -298,8 +346,8 @@ export async function bulkUploadProducts(categoryId: string, collectionId: strin
         data: {
           code: sanitizedCode,
           name: name,
-          categoryId,
-          collectionId: collectionId || null,
+          categoryId: cleanCategoryId,
+          collectionId: cleanCollectionId,
         },
       });
 

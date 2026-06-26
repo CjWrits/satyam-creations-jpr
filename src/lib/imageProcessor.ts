@@ -23,23 +23,6 @@ async function ensureDirsExist() {
   }
 }
 
-function getMimeType(ext: string): string {
-  switch (ext.toLowerCase()) {
-    case '.jpg':
-    case '.jpeg':
-      return 'image/jpeg';
-    case '.png':
-      return 'image/png';
-    case '.webp':
-      return 'image/webp';
-    case '.avif':
-      return 'image/avif';
-    case '.svg':
-      return 'image/svg+xml';
-    default:
-      return 'image/jpeg';
-  }
-}
 
 export async function processImage(
   buffer: Buffer,
@@ -86,17 +69,18 @@ export async function processImage(
       .webp({ quality: 75 })
       .toBuffer();
 
-    // 3. For original, compress it if it is very large (> 4MB) to protect database columns
-    let originalBase64 = '';
-    if (buffer.length > 4 * 1024 * 1024) {
-      const compressedOriginal = await sharp(buffer)
-        .webp({ quality: 60 })
-        .toBuffer();
-      originalBase64 = `data:image/webp;base64,${compressedOriginal.toString('base64')}`;
-    } else {
-      const mimeType = getMimeType(fileExt);
-      originalBase64 = `data:${mimeType};base64,${buffer.toString('base64')}`;
-    }
+    // 3. For original in base64 mode, we compress it heavily to WebP (max 1920 width/height, quality 70)
+    // to prevent database column bloat and Netlify serverless timeout/payload limits.
+    const compressedOriginal = await sharp(buffer)
+      .resize({
+        width: 1920,
+        height: 1920,
+        fit: 'inside',
+        withoutEnlargement: true,
+      })
+      .webp({ quality: 70 })
+      .toBuffer();
+    const originalBase64 = `data:image/webp;base64,${compressedOriginal.toString('base64')}`;
 
     return {
       original: originalBase64,
@@ -183,16 +167,18 @@ export async function processImage(
       .webp({ quality: 75 })
       .toBuffer();
 
-    let originalBase64 = '';
-    if (buffer.length > 4 * 1024 * 1024) {
-      const compressedOriginal = await sharp(buffer)
-        .webp({ quality: 60 })
-        .toBuffer();
-      originalBase64 = `data:image/webp;base64,${compressedOriginal.toString('base64')}`;
-    } else {
-      const mimeType = getMimeType(fileExt);
-      originalBase64 = `data:${mimeType};base64,${buffer.toString('base64')}`;
-    }
+    // For original in base64 mode, we compress it heavily to WebP (max 1920 width/height, quality 70)
+    // to prevent database column bloat and Netlify serverless timeout/payload limits.
+    const compressedOriginal = await sharp(buffer)
+      .resize({
+        width: 1920,
+        height: 1920,
+        fit: 'inside',
+        withoutEnlargement: true,
+      })
+      .webp({ quality: 70 })
+      .toBuffer();
+    const originalBase64 = `data:image/webp;base64,${compressedOriginal.toString('base64')}`;
 
     return {
       original: originalBase64,

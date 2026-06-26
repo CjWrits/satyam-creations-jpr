@@ -22,7 +22,7 @@ export default function ProductCard({ product, index }: ProductCardProps) {
       transition={{ duration: 0.6, delay: index * 0.1, ease: 'easeOut' }}
       className="group flex flex-col bg-white/50 backdrop-blur-sm rounded-xl overflow-hidden border border-gold/10 hover:border-gold/30 hover:bg-white/80 shadow-sm hover:shadow-xl transition-all duration-500"
     >
-      <Link href={`/product/${product.id}`} className="relative aspect-[3/4] overflow-hidden w-full bg-beige">
+      <Link href={`/product/${product.id}`} prefetch={false} className="relative aspect-[3/4] overflow-hidden w-full bg-beige">
         <Image
           src={imageUrl}
           alt={product.name}
@@ -58,7 +58,7 @@ export default function ProductCard({ product, index }: ProductCardProps) {
           </span>
         </div>
 
-        <Link href={`/product/${product.id}`}>
+        <Link href={`/product/${product.id}`} prefetch={false}>
           <h3 className="font-serif text-base font-light text-maroon tracking-wide group-hover:text-gold transition-colors line-clamp-1">
             {product.name}
           </h3>

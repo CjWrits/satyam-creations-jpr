@@ -73,6 +73,7 @@ export default function Navbar({ user }: NavbarProps) {
                 <Link
                   key={link.href}
                   href={link.href}
+                  prefetch={false}
                   className={`relative flex items-center space-x-1.5 text-xs font-light uppercase tracking-widest py-2 transition-colors ${
                     active ? 'text-maroon' : 'text-soft-black/60 hover:text-maroon'
                   }`}
@@ -143,6 +144,7 @@ export default function Navbar({ user }: NavbarProps) {
                     key={link.href}
                     href={link.href}
                     onClick={() => setIsOpen(false)}
+                    prefetch={false}
                     className={`flex items-center space-x-3 px-3 py-3 rounded-lg text-sm font-light uppercase tracking-wider transition-colors ${
                       active ? 'bg-maroon/5 text-maroon border-l-2 border-gold' : 'text-soft-black/70 hover:bg-maroon/5 hover:text-maroon'
                     }`}

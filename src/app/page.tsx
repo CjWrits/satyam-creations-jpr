@@ -68,6 +68,7 @@ export default async function HomePage() {
             <div className="pt-4 flex flex-wrap gap-4">
               <Link
                 href="/catalog"
+                prefetch={false}
                 className="px-6 py-3 bg-maroon hover:bg-maroon-hover text-white rounded-lg text-xs uppercase tracking-widest font-light shadow-md transition-all flex items-center space-x-2 border border-gold/30"
               >
                 <Compass className="w-4 h-4 text-gold" />
@@ -76,6 +77,7 @@ export default async function HomePage() {
               {session?.role === 'ADMIN' && (
                 <Link
                   href="/admin"
+                  prefetch={false}
                   className="px-6 py-3 bg-white/60 hover:bg-white text-maroon border border-gold/30 rounded-lg text-xs uppercase tracking-widest font-light transition-all flex items-center space-x-2 shadow-sm"
                 >
                   <Shield className="w-4 h-4 text-gold" />
@@ -112,6 +114,7 @@ export default async function HomePage() {
               <Link
                 key={cat.id}
                 href={`/catalog?category=${cat.id}`}
+                prefetch={false}
                 className="group relative aspect-[4/5] rounded-xl overflow-hidden shadow-sm border border-gold/10 hover:border-gold/30 transition-all flex flex-col justify-end p-4 bg-beige"
               >
                 <Image
@@ -185,6 +188,7 @@ export default async function HomePage() {
                     </div>
                     <Link
                       href={`/catalog?collection=${col.id}`}
+                      prefetch={false}
                       className="text-[10px] uppercase tracking-widest font-semibold text-gold hover:text-maroon transition-colors flex items-center space-x-1.5"
                     >
                       <span>Explore Collection</span>
@@ -211,6 +215,7 @@ export default async function HomePage() {
           </div>
           <Link
             href="/catalog"
+            prefetch={false}
             className="px-5 py-2.5 bg-white border border-gold/30 hover:border-gold hover:bg-beige text-maroon text-xs uppercase tracking-widest font-light transition-all rounded-lg flex items-center space-x-2 shadow-sm"
           >
             <span>View Complete Catalog</span>
@@ -271,10 +276,10 @@ export default async function HomePage() {
             <span className="text-[9px] text-ivory/40 uppercase tracking-wider font-light mt-1">© 2026 Kurti Showcase. All rights reserved.</span>
           </div>
           <div className="flex space-x-6 text-[10px] text-ivory/60 uppercase tracking-widest font-light mt-4 md:mt-0">
-            <Link href="/" className="hover:text-gold transition-colors">Home</Link>
-            <Link href="/catalog" className="hover:text-gold transition-colors">Catalog</Link>
+            <Link href="/" prefetch={false} className="hover:text-gold transition-colors">Home</Link>
+            <Link href="/catalog" prefetch={false} className="hover:text-gold transition-colors">Catalog</Link>
             {session?.role === 'ADMIN' && (
-              <Link href="/admin" className="hover:text-gold transition-colors">Admin Panel</Link>
+              <Link href="/admin" prefetch={false} className="hover:text-gold transition-colors">Admin Panel</Link>
             )}
           </div>
         </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { ProductData, CategoryData, CollectionData } from '@/lib/data';
 import { 
   createCategory, deleteCategory 
@@ -12,8 +12,12 @@ import {
   createProduct, updateProduct, deleteProduct, bulkUploadProducts 
 } from '@/app/actions/products';
 import { 
+  createUser, deleteUser 
+} from '@/app/actions/users';
+import { 
   Plus, Trash2, Edit2, UploadCloud, Search, 
-  FolderPlus, Layers, FileText, CheckCircle, AlertCircle, RefreshCw 
+  FolderPlus, Layers, FileText, CheckCircle, AlertCircle, RefreshCw,
+  Users, UserPlus, UserMinus, ShieldAlert
 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -21,9 +25,17 @@ interface AdminDashboardProps {
   initialProducts: ProductData[];
   categories: CategoryData[];
   collections: CollectionData[];
+  initialUsers: {
+    id: string;
+    email: string;
+    name: string | null;
+    role: string;
+    createdAt: string;
+  }[];
+  currentUserId: string;
 }
 
-type TabType = 'products' | 'add-product' | 'bulk-upload' | 'categories' | 'collections';
+type TabType = 'products' | 'add-product' | 'bulk-upload' | 'categories' | 'collections' | 'users';
 
 // Helper to compress an image file in the browser using HTML5 Canvas
 async function compressImageClientSide(file: File, maxWidth = 1600, maxHeight = 2400, quality = 0.8): Promise<File> {
@@ -93,7 +105,13 @@ async function compressImageClientSide(file: File, maxWidth = 1600, maxHeight = 
   });
 }
 
-export default function AdminDashboard({ initialProducts, categories, collections }: AdminDashboardProps) {
+export default function AdminDashboard({ 
+  initialProducts, 
+  categories, 
+  collections,
+  initialUsers,
+  currentUserId
+}: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<TabType>('products');
   const [isPending, startTransition] = useTransition();
   const [search, setSearch] = useState('');
@@ -106,6 +124,17 @@ export default function AdminDashboard({ initialProducts, categories, collection
   const [newCatName, setNewCatName] = useState('');
   const [newColName, setNewColName] = useState('');
   const [newColDesc, setNewColDesc] = useState('');
+
+  // User management local states
+  const [users, setUsers] = useState(initialUsers);
+  const [newUserEmail, setNewUserEmail] = useState('');
+  const [newUserName, setNewUserName] = useState('');
+  const [newUserPassword, setNewUserPassword] = useState('');
+  const [newUserRole, setNewUserRole] = useState('VIEWER');
+
+  useEffect(() => {
+    setUsers(initialUsers);
+  }, [initialUsers]);
 
   // Editing state
   const [editingProduct, setEditingProduct] = useState<ProductData | null>(null);
@@ -387,6 +416,66 @@ export default function AdminDashboard({ initialProducts, categories, collection
     }
   };
 
+  // 9. Add User
+  const handleAddUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    clearMessages();
+
+    if (!newUserEmail.trim() || !newUserPassword.trim() || !newUserRole) {
+      setErrorMsg('Email, Password, and Role are required.');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('email', newUserEmail);
+    formData.append('name', newUserName);
+    formData.append('password', newUserPassword);
+    formData.append('role', newUserRole);
+
+    startTransition(async () => {
+      try {
+        const res = await createUser(formData);
+        if (res.success) {
+          setSuccessMsg('User added successfully.');
+          setNewUserEmail('');
+          setNewUserName('');
+          setNewUserPassword('');
+          setNewUserRole('VIEWER');
+        } else {
+          setErrorMsg(res.error || 'Failed to add user.');
+        }
+      } catch (err: unknown) {
+        const error = err as Error;
+        setErrorMsg(error.message || 'Failed to add user.');
+      }
+    });
+  };
+
+  // 10. Delete User
+  const handleDeleteUser = async (id: string, email: string) => {
+    if (!confirm(`Are you sure you want to delete user ${email}?`)) return;
+    clearMessages();
+
+    if (id === currentUserId) {
+      setErrorMsg('You cannot delete your own active session.');
+      return;
+    }
+
+    startTransition(async () => {
+      try {
+        const res = await deleteUser(id);
+        if (res.success) {
+          setSuccessMsg('User deleted successfully.');
+        } else {
+          setErrorMsg(res.error || 'Failed to delete user.');
+        }
+      } catch (err: unknown) {
+        const error = err as Error;
+        setErrorMsg(error.message || 'Failed to delete user.');
+      }
+    });
+  };
+
   const filteredProducts = initialProducts.filter((p) => {
     const s = search.toLowerCase();
     return p.name.toLowerCase().includes(s) || p.code.toLowerCase().includes(s);
@@ -444,6 +533,16 @@ export default function AdminDashboard({ initialProducts, categories, collection
         >
           <Layers className="w-4 h-4" />
           <span>Manage Collections</span>
+        </button>
+
+        <button
+          onClick={() => { setActiveTab('users'); clearMessages(); setEditingProduct(null); }}
+          className={`flex items-center space-x-2.5 px-4 py-3 rounded-lg text-xs font-semibold uppercase tracking-wider text-left transition-all ${
+            activeTab === 'users' ? 'bg-maroon text-white shadow-md' : 'bg-white/60 hover:bg-white text-soft-black/80 border border-gold/10'
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          <span>Manage Users</span>
         </button>
       </div>
 
@@ -1019,6 +1118,120 @@ export default function AdminDashboard({ initialProducts, categories, collection
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'users' && (
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 text-left">
+            {/* Create User Form */}
+            <div className="md:col-span-5 bg-white/60 border border-gold/15 rounded-xl p-5 shadow-sm space-y-5 h-fit">
+              <div>
+                <h3 className="font-serif text-base font-light text-maroon tracking-wider">Add New User</h3>
+                <p className="text-[10px] text-soft-black/50 uppercase tracking-widest font-light mt-1">Create viewer or additional admin accounts</p>
+              </div>
+              
+              <form onSubmit={handleAddUser} className="space-y-4">
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase tracking-wider text-soft-black/60 mb-1">Full Name (Optional)</label>
+                  <input
+                    type="text"
+                    value={newUserName}
+                    onChange={(e) => setNewUserName(e.target.value)}
+                    placeholder="e.g. John Doe"
+                    className="w-full px-3 py-2 bg-white/40 border border-gold/20 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-gold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase tracking-wider text-soft-black/60 mb-1">Email Address</label>
+                  <input
+                    type="email"
+                    value={newUserEmail}
+                    onChange={(e) => setNewUserEmail(e.target.value)}
+                    required
+                    placeholder="e.g. user@example.com"
+                    className="w-full px-3 py-2 bg-white/40 border border-gold/20 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-gold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase tracking-wider text-soft-black/60 mb-1">Access Password</label>
+                  <input
+                    type="password"
+                    value={newUserPassword}
+                    onChange={(e) => setNewUserPassword(e.target.value)}
+                    required
+                    placeholder="Minimum 6 characters"
+                    className="w-full px-3 py-2 bg-white/40 border border-gold/20 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-gold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase tracking-wider text-soft-black/60 mb-1">Account Role</label>
+                  <select
+                    value={newUserRole}
+                    onChange={(e) => setNewUserRole(e.target.value)}
+                    className="w-full px-3 py-2 bg-white/40 border border-gold/20 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-gold"
+                  >
+                    <option value="VIEWER">Viewer (Catalog Browsing Only)</option>
+                    <option value="ADMIN">Admin (Full Console Access)</option>
+                  </select>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isPending}
+                  className="w-full py-2 bg-maroon hover:bg-maroon-hover text-white rounded-lg text-xs font-semibold uppercase tracking-wider shadow disabled:opacity-50 flex items-center justify-center gap-1.5"
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  <span>{isPending ? 'Processing...' : 'Create Account'}</span>
+                </button>
+              </form>
+            </div>
+
+            {/* Users list */}
+            <div className="md:col-span-7 bg-white/60 border border-gold/15 rounded-xl p-5 shadow-sm space-y-4">
+              <h4 className="font-serif text-sm font-semibold text-maroon uppercase tracking-wider">Active Showroom Access ({users.length})</h4>
+              
+              <div className="space-y-3.5 max-h-[450px] overflow-y-auto pr-2">
+                {users.map((usr) => (
+                  <div key={usr.id} className="flex justify-between items-center py-2.5 border-b border-gold/10 text-xs">
+                    <div className="space-y-1">
+                      <div className="font-medium text-maroon flex items-center gap-2">
+                        <span>{usr.name || 'Anonymous User'}</span>
+                        <span className={`px-2 py-0.5 rounded-full text-[8px] font-semibold tracking-wider ${
+                          usr.role === 'ADMIN' ? 'bg-gold/10 border border-gold/30 text-gold' : 'bg-soft-black/5 border border-soft-black/20 text-soft-black/60'
+                        }`}>
+                          {usr.role}
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-soft-black/50">{usr.email}</div>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      {usr.id === 'admin-env' ? (
+                        <span className="text-[9px] text-gold font-light tracking-wide flex items-center gap-1" title="Environment configured admin - cannot be deleted.">
+                          <ShieldAlert className="w-3.5 h-3.5" />
+                          <span>System Protected</span>
+                        </span>
+                      ) : usr.id === currentUserId ? (
+                        <span className="text-[9px] text-emerald-800 font-medium bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded" title="This is your active session.">
+                          Current Session
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => handleDeleteUser(usr.id, usr.email)}
+                          className="p-1 text-soft-black/40 hover:text-red-700 transition-colors"
+                          title="Delete Access"
+                        >
+                          <UserMinus className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>

@@ -3,24 +3,63 @@ import AdminDashboard from './AdminDashboard';
 import { getSession } from '@/lib/auth';
 import { getProducts, getCategories, getCollections } from '@/lib/data';
 import { Shield } from 'lucide-react';
+import prisma from '@/lib/prisma';
 
 export default async function AdminPage() {
   const session = await getSession();
 
-  // Load all current stocks, silhouettes and collections
+  // Load all current stocks, silhouettes, collections and database users
   let products = [];
   let categories = [];
   let collections = [];
+  let users = [];
 
   try {
-    const [p, cat, col] = await Promise.all([
+    const [p, cat, col, u] = await Promise.all([
       getProducts({ sortBy: 'latest' }),
       getCategories(),
       getCollections(),
+      prisma.user.findMany({
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          createdAt: true,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      }),
     ]);
     products = p;
     categories = cat;
     collections = col;
+
+    const dbUsers = u.map((usr) => ({
+      id: usr.id,
+      email: usr.email,
+      name: usr.name,
+      role: usr.role,
+      createdAt: usr.createdAt.toISOString(),
+    }));
+
+    // Prepend the environment admin account if config exists
+    const envAdminEmail = process.env.ADMIN_EMAIL;
+    if (envAdminEmail) {
+      users = [
+        {
+          id: 'admin-env',
+          email: envAdminEmail,
+          name: 'System Admin (Env)',
+          role: 'ADMIN',
+          createdAt: new Date().toISOString(),
+        },
+        ...dbUsers,
+      ];
+    } else {
+      users = dbUsers;
+    }
   } catch (error) {
     console.error('SERVER RENDER ERROR: Data fetching failed in admin page.tsx:', error);
     throw error;
@@ -59,6 +98,8 @@ export default async function AdminPage() {
           initialProducts={products}
           categories={categories}
           collections={collections}
+          initialUsers={users}
+          currentUserId={session?.userId || ''}
         />
       </main>
 
